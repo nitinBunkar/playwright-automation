@@ -5,8 +5,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/nitinBunkar/playwright-automation.git'
+                checkout scm
             }
         }
 
@@ -17,7 +16,10 @@ pipeline {
                     . .venv/bin/activate
 
                     python -m pip install --upgrade pip
-                    pip install -r requirements.txt
+                    python -m pip install -r requirements.txt
+
+                    echo "Installed packages:"
+                    python -m pip list
                 '''
             }
         }
@@ -26,7 +28,9 @@ pipeline {
             steps {
                 sh '''
                     . .venv/bin/activate
-                    playwright install --with-deps chromium
+
+                    python -m playwright --version
+                    python -m playwright install chromium
                 '''
             }
         }
@@ -35,23 +39,19 @@ pipeline {
             steps {
                 sh '''
                     . .venv/bin/activate
-                    pytest -v --html=reports/report.html --self-contained-html
+
+                    python -m pytest -v --junitxml=results.xml
                 '''
             }
         }
     }
 
     post {
-
         always {
-            publishHTML([
-                allowMissing: true,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'reports',
-                reportFiles: 'report.html',
-                reportName: 'Playwright Test Report'
-            ])
+            junit allowEmptyResults: true,
+                  testResults: 'results.xml'
+
+            echo 'Playwright pipeline execution completed.'
         }
 
         success {
