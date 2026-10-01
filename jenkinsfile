@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -9,38 +10,19 @@ pipeline {
             }
         }
 
-        stage('Setup Python') {
+        stage('Build Docker Image') {
             steps {
-                sh '''
-                    python3 -m venv .venv
-                    . .venv/bin/activate
-
-                    python -m pip install --upgrade pip
-                    python -m pip install -r requirements.txt
-
-                    echo "Installed packages:"
-                    python -m pip list
-                '''
+                sh 'docker build -t playwright-automation:latest .'
             }
         }
 
-        stage('Install Playwright Browsers') {
+        stage('Run Playwright Tests in Docker') {
             steps {
                 sh '''
-                    . .venv/bin/activate
-
-                    python -m playwright --version
-                    python -m playwright install chromium
-                '''
-            }
-        }
-
-        stage('Run Playwright Tests') {
-            steps {
-                sh '''
-                    . .venv/bin/activate
-
-                    python -m pytest -v --junitxml=results.xml
+                    docker run --rm \
+                        -v "$WORKSPACE:/app" \
+                        playwright-automation:latest \
+                        pytest -v --junitxml=results.xml
                 '''
             }
         }
